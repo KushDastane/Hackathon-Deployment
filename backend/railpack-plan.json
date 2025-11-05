@@ -1,0 +1,12 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "build": [
+    "# Install backend dependencies (production only)",
+    "npm ci --omit=dev"
+  ],
+  "start": [
+    "# Start the backend server",
+    "npm start"
+  ]
+}
