@@ -11,19 +11,21 @@ const server = http.createServer(app);
 // Enable CORS for all routes
 const allowedOrigins = [
   "https://ambulancemanagement.netlify.app", // production frontend
-  process.env.NODE_ENV === "development" ? "http://localhost:3000" : null, // local dev only in development
-].filter(Boolean); // Remove null values
+];
+
+if (process.env.NODE_ENV !== "production") {
+  allowedOrigins.push("http://localhost:3000"); // allow localhost in development
+}
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
+      if (!origin) return callback(null, true); // allow curl/postman
 
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(new Error("Not allowed by CORS: " + origin));
       }
     },
     credentials: true,
