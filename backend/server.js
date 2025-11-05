@@ -10,12 +10,18 @@ const app = express();
 const server = http.createServer(app);
 
 // Enable CORS for all routes
-app.use(cors({
-  origin: process.env.NODE_ENV === "production" 
-    ? ["https://ambulance-dashboard.onrender.com", "https://your-app-name.onrender.com"]
-    : "http://localhost:3000",
-  credentials: true
-}));
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === "production"
+        ? [
+            "https://ambulance-dashboard.onrender.com",
+            "https://your-app-name.onrender.com",
+          ]
+        : process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // =============================================
