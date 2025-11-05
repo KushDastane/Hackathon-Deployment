@@ -1,4 +1,4 @@
-import { io } from 'socket.io-client';
+import { io } from "socket.io-client";
 
 class SocketService {
   constructor() {
@@ -6,25 +6,29 @@ class SocketService {
   }
 
   connect() {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      throw new Error('No authentication token found');
+      throw new Error("No authentication token found");
     }
 
-    this.socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000', {
-      auth: {
-        token: token
+    this.socket = io(
+      process.env.REACT_APP_SOCKET_URL ||
+        "https://ambulancemanagement-u67j.onrender.com",
+      {
+        auth: {
+          token: token,
+        },
       }
-    });
+    );
 
     return new Promise((resolve, reject) => {
-      this.socket.on('connect', () => {
-        console.log('Connected to server');
+      this.socket.on("connect", () => {
+        console.log("Connected to server");
         resolve(this.socket);
       });
 
-      this.socket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
+      this.socket.on("connect_error", (error) => {
+        console.error("Connection error:", error);
         reject(error);
       });
     });
