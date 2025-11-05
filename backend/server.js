@@ -4,21 +4,31 @@ const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config();
 
 const app = express();
 const server = http.createServer(app);
 
 // Enable CORS for all routes
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://ambulancemanagement.netlify.app", // production frontend
+  "https://ambulancemanagement.netlify.app", // production frontend
   process.env.NODE_ENV === "development" ? "http://localhost:3000" : null, // local dev only in development
 ].filter(Boolean); // Remove null values
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -49,7 +59,6 @@ app.get("/api/health", (req, res) => {
 app.get("/health", (req, res) => {
   res.send("OK");
 });
-
 
 // Test endpoint
 app.get("/api/test", (req, res) => {
@@ -421,6 +430,7 @@ server.listen(PORT, () => {
   console.log(`✅ Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔌 Socket.IO ready for real-time communication`);
   console.log(`🛡️  Duplicate protection: ACTIVE`);
+  console.log(`🌐 CORS allowed origins:`, allowedOrigins);
 
   if (process.env.NODE_ENV === "production") {
     console.log(`🚀 Production mode: Serving React app from same domain`);
