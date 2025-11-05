@@ -46,6 +46,10 @@ app.get("/api/health", (req, res) => {
     port: process.env.PORT || 5000,
   });
 });
+app.get("/health", (req, res) => {
+  res.send("OK");
+});
+
 
 // Test endpoint
 app.get("/api/test", (req, res) => {
