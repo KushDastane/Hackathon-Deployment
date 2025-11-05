@@ -15,13 +15,13 @@ app.use(
     origin:
       process.env.NODE_ENV === "production"
         ? [
-            "https://ambulance-dashboard.onrender.com",
-            "https://your-app-name.onrender.com",
+            "https://ambulancemanagement.netlify.app", // ✅ your real frontend
           ]
-        : process.env.FRONTEND_URL,
+        : process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
   })
 );
+
 app.use(express.json());
 
 // =============================================
