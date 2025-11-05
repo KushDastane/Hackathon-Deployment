@@ -12,15 +12,14 @@ const server = http.createServer(app);
 // Enable CORS for all routes
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? [
-            "https://ambulancemanagement.netlify.app", // ✅ your real frontend
-          ]
-        : process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000", // local dev
+      "https://ambulancemanagement.netlify.app", // deployed frontend
+    ],
     credentials: true,
   })
 );
+
 
 app.use(express.json());
 
@@ -102,12 +101,14 @@ app.post('/api/auth/login', (req, res) => {
 
 const io = socketIo(server, {
   cors: {
-    origin: process.env.NODE_ENV === "production" 
-      ? ["https://ambulance-dashboard.onrender.com", "https://your-app-name.onrender.com"]
-      : "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+    origin: [
+      "http://localhost:3000",
+      "https://ambulancemanagement.netlify.app",
+    ],
+    methods: ["GET", "POST"],
+  },
 });
+
 
 // Store connected clients by role and track last transmissions
 const connectedClients = {
