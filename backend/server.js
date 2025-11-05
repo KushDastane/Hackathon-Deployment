@@ -29,17 +29,9 @@ app.use(express.json());
 
 // Serve frontend build in production
 if (process.env.NODE_ENV === "production") {
-  // Serve static files from the React build
-  app.use(express.static(path.join(__dirname, "../client/build")));
-
-  // Handle React routing, return all requests to React app
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../client/build/index.html"));
-  });
-  console.log('🚀 Production mode: Serving React build from ../client/build');
-} else {
-  console.log('🔧 Development mode: React app runs on separate port (3000)');
+  console.log("🚀 Production mode: Frontend served separately via Netlify");
 }
+
 
 // =============================================
 // API ROUTES
