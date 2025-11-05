@@ -86,8 +86,20 @@ export const testBackendConnection = async () => {
 
 // Auth services
 export const authService = {
-  login: (username, password) =>
-    api.post("/auth/login", { username, password }),
+  login: (username, password) => {
+    const baseUrl =
+      process.env.NODE_ENV === "production"
+        ? "https://ambulancemanagement-u67j.onrender.com"
+        : "http://localhost:5000";
+    return axios.post(
+      `${baseUrl}/api/auth/login`,
+      { username, password },
+      {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000,
+      }
+    );
+  },
 
   getCurrentUser: () => api.get("/auth/me"),
 
