@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Secure ambulance data transmission dashboard",
   "dependencies": {
+    "ambulance-frontend": "file:..",
     "autoprefixer": "^10.4.0",
     "axios": "^1.5.0",
     "crypto-js": "^4.2.0",
