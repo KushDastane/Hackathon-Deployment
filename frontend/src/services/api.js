@@ -3,7 +3,9 @@ import axios from "axios";
 // Use explicit backend URL
 const API_BASE_URL =
   process.env.REACT_APP_BACKEND_URL ||
-  "https://ambulancemanagement-u67j.onrender.com/api";
+  (process.env.NODE_ENV === "production"
+    ? "https://ambulancemanagement-u67j.onrender.com/api"
+    : "http://localhost:5000/api");
 
 console.log("🔧 API Base URL:", API_BASE_URL); // Debug log
 
