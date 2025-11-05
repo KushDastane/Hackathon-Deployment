@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import socketService from '../services/socketService';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import socketService from "../services/socketService";
 
 const AmbulanceDashboard = () => {
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [patientData, setPatientData] = useState({
-    patientName: '',
-    patientAge: '',
-    condition: ''
+    patientName: "",
+    patientAge: "",
+    condition: "",
+    gender: "",
+    symptoms: "",
   });
   const [vitals, setVitals] = useState({
     heartRate: 75,
@@ -16,15 +18,16 @@ const AmbulanceDashboard = () => {
     bloodPressureDiastolic: 80,
     spo2: 98,
     temperature: 36.8,
-    respiratoryRate: 16
+    respiratoryRate: 16,
   });
   const [isSimulating, setIsSimulating] = useState(false);
-  const [transmissionStatus, setTransmissionStatus] = useState('');
+  const [transmissionStatus, setTransmissionStatus] = useState("");
   const [criticalAlerts, setCriticalAlerts] = useState([]);
   const [activeEmergency, setActiveEmergency] = useState(null);
   const [selectedHospital, setSelectedHospital] = useState(null);
+  const [aiRecommendations, setAiRecommendations] = useState(null);
 
-  // Hospital data with specialties and 24/7 status - YOUR ORIGINAL DATA
+  // Hospital data with specialties and 24/7 status
   const hospitals = [
     {
       id: 1,
@@ -32,10 +35,30 @@ const AmbulanceDashboard = () => {
       distance: "2.3 km",
       eta: "8 mins",
       is24x7: true,
-      specialties: ["Cardiology", "Oncology", "Neurology", "Radiology", "Orthopaedics"],
+      specialties: [
+        "Cardiology",
+        "Oncology",
+        "Neurology",
+        "Radiology",
+        "Orthopaedics",
+      ],
       contact: "+1-555-0101",
       bedsAvailable: 12,
-      emergencyCapacity: "High"
+      emergencyCapacity: "High",
+      doctors: [
+        {
+          name: "Dr. Raj Sharma",
+          specialty: "Cardiology",
+          experience: "15 years",
+          available: true,
+        },
+        {
+          name: "Dr. Priya Singh",
+          specialty: "Neurology",
+          experience: "12 years",
+          available: true,
+        },
+      ],
     },
     {
       id: 2,
@@ -43,10 +66,29 @@ const AmbulanceDashboard = () => {
       distance: "4.1 km",
       eta: "12 mins",
       is24x7: true,
-      specialties: ["Pediatrics", "Obstetrics & Gynecology", "Dermatology", "Cardiology"],
+      specialties: [
+        "Pediatrics",
+        "Obstetrics & Gynecology",
+        "Dermatology",
+        "Cardiology",
+      ],
       contact: "+1-555-0102",
       bedsAvailable: 8,
-      emergencyCapacity: "Medium"
+      emergencyCapacity: "Medium",
+      doctors: [
+        {
+          name: "Dr. Anjali Mehta",
+          specialty: "Pediatrics",
+          experience: "10 years",
+          available: true,
+        },
+        {
+          name: "Dr. Sanjay Kumar",
+          specialty: "Obstetrics & Gynecology",
+          experience: "8 years",
+          available: false,
+        },
+      ],
     },
     {
       id: 3,
@@ -57,7 +99,21 @@ const AmbulanceDashboard = () => {
       specialties: ["Orthopaedics", "Ophthalmology", "Radiology", "Neurology"],
       contact: "+1-555-0103",
       bedsAvailable: 5,
-      emergencyCapacity: "Medium"
+      emergencyCapacity: "Medium",
+      doctors: [
+        {
+          name: "Dr. Vikram Joshi",
+          specialty: "Orthopaedics",
+          experience: "20 years",
+          available: true,
+        },
+        {
+          name: "Dr. Neha Gupta",
+          specialty: "Ophthalmology",
+          experience: "7 years",
+          available: true,
+        },
+      ],
     },
     {
       id: 4,
@@ -65,10 +121,30 @@ const AmbulanceDashboard = () => {
       distance: "5.2 km",
       eta: "14 mins",
       is24x7: true,
-      specialties: ["Cardiology", "Neurology", "Radiology", "Orthopaedics", "Pediatrics"],
+      specialties: [
+        "Cardiology",
+        "Neurology",
+        "Radiology",
+        "Orthopaedics",
+        "Pediatrics",
+      ],
       contact: "+1-555-0104",
       bedsAvailable: 15,
-      emergencyCapacity: "High"
+      emergencyCapacity: "High",
+      doctors: [
+        {
+          name: "Dr. Arjun Patel",
+          specialty: "Emergency Medicine",
+          experience: "18 years",
+          available: true,
+        },
+        {
+          name: "Dr. Sneha Reddy",
+          specialty: "Cardiology",
+          experience: "14 years",
+          available: true,
+        },
+      ],
     },
     {
       id: 5,
@@ -76,175 +152,438 @@ const AmbulanceDashboard = () => {
       distance: "6.8 km",
       eta: "18 mins",
       is24x7: true,
-      specialties: ["Oncology", "Obstetrics & Gynecology", "Dermatology", "Ophthalmology"],
+      specialties: [
+        "Oncology",
+        "Obstetrics & Gynecology",
+        "Dermatology",
+        "Ophthalmology",
+      ],
       contact: "+1-555-0105",
       bedsAvailable: 6,
-      emergencyCapacity: "Low"
-    }
+      emergencyCapacity: "Low",
+      doctors: [
+        {
+          name: "Dr. Meera Nair",
+          specialty: "Oncology",
+          experience: "16 years",
+          available: true,
+        },
+        {
+          name: "Dr. Rahul Desai",
+          specialty: "Dermatology",
+          experience: "9 years",
+          available: true,
+        },
+      ],
+    },
   ];
 
   // Specialty icons mapping
   const specialtyIcons = {
-    "Cardiology": "❤️",
-    "Oncology": "🦠",
-    "Dermatology": "🔬",
-    "Orthopaedics": "🦴",
-    "Pediatrics": "👶",
+    Cardiology: "❤️",
+    Oncology: "🦠",
+    Dermatology: "🔬",
+    Orthopaedics: "🦴",
+    Pediatrics: "👶",
     "Obstetrics & Gynecology": "👩",
-    "Neurology": "🧠",
-    "Ophthalmology": "👁️",
-    "Radiology": "📡"
+    Neurology: "🧠",
+    Ophthalmology: "👁️",
+    Radiology: "📡",
+    "Emergency Medicine": "🚨",
+  };
+
+  // AI Recommendation Engine
+  const getAIRecommendations = (patientData, vitals) => {
+    const recommendations = {
+      severity: "low",
+      suggestedSpecialties: [],
+      criticalWarnings: [],
+      immediateActions: [],
+      recommendedHospitals: [],
+      riskLevel: "low",
+      confidence: 0.85,
+    };
+
+    // Analyze vitals for critical conditions
+    if (vitals.heartRate < 50 || vitals.heartRate > 140) {
+      recommendations.criticalWarnings.push("Abnormal heart rate detected");
+      recommendations.suggestedSpecialties.push("Cardiology");
+      recommendations.severity = "high";
+    }
+
+    if (vitals.spo2 < 90) {
+      recommendations.criticalWarnings.push(
+        "Low oxygen saturation - risk of hypoxia"
+      );
+      recommendations.suggestedSpecialties.push(
+        "Cardiology",
+        "Emergency Medicine"
+      );
+      recommendations.severity = "high";
+      recommendations.immediateActions.push(
+        "Administer oxygen",
+        "Monitor breathing closely"
+      );
+    }
+
+    if (
+      vitals.bloodPressureSystolic > 180 ||
+      vitals.bloodPressureSystolic < 90
+    ) {
+      recommendations.criticalWarnings.push("Abnormal blood pressure");
+      recommendations.suggestedSpecialties.push("Cardiology");
+      recommendations.severity = "high";
+    }
+
+    if (vitals.temperature > 39) {
+      recommendations.criticalWarnings.push("High fever - possible infection");
+      recommendations.suggestedSpecialties.push("Emergency Medicine");
+      recommendations.immediateActions.push(
+        "Monitor temperature",
+        "Consider antipyretics"
+      );
+    }
+
+    if (vitals.respiratoryRate > 24 || vitals.respiratoryRate < 12) {
+      recommendations.criticalWarnings.push("Abnormal respiratory rate");
+      recommendations.suggestedSpecialties.push("Emergency Medicine");
+    }
+
+    // Analyze patient condition and symptoms
+    const condition = patientData.condition?.toLowerCase() || "";
+    const symptoms = patientData.symptoms?.toLowerCase() || "";
+
+    if (
+      condition.includes("chest") ||
+      condition.includes("heart") ||
+      symptoms.includes("chest pain")
+    ) {
+      recommendations.suggestedSpecialties.push("Cardiology");
+      recommendations.severity = Math.max(recommendations.severity, "high");
+      recommendations.immediateActions.push(
+        "Monitor ECG if available",
+        "Check for cardiac history"
+      );
+    }
+
+    if (
+      condition.includes("head") ||
+      condition.includes("brain") ||
+      symptoms.includes("headache") ||
+      symptoms.includes("stroke")
+    ) {
+      recommendations.suggestedSpecialties.push("Neurology");
+      recommendations.severity = Math.max(recommendations.severity, "high");
+    }
+
+    if (
+      condition.includes("bone") ||
+      condition.includes("fracture") ||
+      condition.includes("joint")
+    ) {
+      recommendations.suggestedSpecialties.push("Orthopaedics");
+    }
+
+    if (
+      condition.includes("child") ||
+      (patientData.patientAge && patientData.patientAge < 16)
+    ) {
+      recommendations.suggestedSpecialties.push("Pediatrics");
+    }
+
+    if (
+      condition.includes("pregnant") ||
+      condition.includes("women") ||
+      condition.includes("gynecology")
+    ) {
+      recommendations.suggestedSpecialties.push("Obstetrics & Gynecology");
+      recommendations.severity = Math.max(recommendations.severity, "high");
+    }
+
+    if (condition.includes("cancer") || condition.includes("oncology")) {
+      recommendations.suggestedSpecialties.push("Oncology");
+    }
+
+    if (condition.includes("skin") || condition.includes("dermatology")) {
+      recommendations.suggestedSpecialties.push("Dermatology");
+    }
+
+    if (condition.includes("eye") || condition.includes("vision")) {
+      recommendations.suggestedSpecialties.push("Ophthalmology");
+    }
+
+    // Remove duplicates
+    recommendations.suggestedSpecialties = [
+      ...new Set(recommendations.suggestedSpecialties),
+    ];
+
+    // Determine risk level based on severity
+    if (
+      recommendations.severity === "high" &&
+      recommendations.criticalWarnings.length > 0
+    ) {
+      recommendations.riskLevel = "critical";
+    } else if (recommendations.severity === "high") {
+      recommendations.riskLevel = "high";
+    } else if (recommendations.suggestedSpecialties.length > 0) {
+      recommendations.riskLevel = "medium";
+    }
+
+    // Recommend hospitals based on specialties
+    recommendations.recommendedHospitals = hospitals
+      .filter((hospital) =>
+        recommendations.suggestedSpecialties.some((specialty) =>
+          hospital.specialties.includes(specialty)
+        )
+      )
+      .sort((a, b) => {
+        // Prioritize 24/7 hospitals with higher capacity
+        if (a.is24x7 && !b.is24x7) return -1;
+        if (!a.is24x7 && b.is24x7) return 1;
+        if (a.emergencyCapacity === "High" && b.emergencyCapacity !== "High")
+          return -1;
+        if (a.emergencyCapacity !== "High" && b.emergencyCapacity === "High")
+          return 1;
+        return 0;
+      });
+
+    // If no specific specialties, recommend hospitals with emergency medicine
+    if (recommendations.recommendedHospitals.length === 0) {
+      recommendations.recommendedHospitals = hospitals
+        .filter((hospital) => hospital.is24x7)
+        .sort((a, b) => a.distance.localeCompare(b.distance));
+    }
+
+    return recommendations;
   };
 
   // Load critical alerts history from localStorage
   useEffect(() => {
-    const savedAlerts = localStorage.getItem('ambulanceCriticalAlerts');
+    const savedAlerts = localStorage.getItem("ambulanceCriticalAlerts");
     if (savedAlerts) {
       setCriticalAlerts(JSON.parse(savedAlerts));
     }
   }, []);
 
   useEffect(() => {
-    console.log('🚑 Ambulance Dashboard mounted');
-    
+    console.log("Ambulance Dashboard mounted");
+
     // Connect to Socket.IO with ambulance role
-    const socket = socketService.connect('ambulance_staff');
-    
+    const socket = socketService.connect("ambulance_staff");
+
     if (socket) {
-      socket.on('connect', () => {
-        console.log('✅ Ambulance socket connected');
+      socket.on("connect", () => {
+        console.log("✅ Ambulance socket connected");
         setIsConnected(true);
       });
 
-      socket.on('disconnect', () => {
-        console.log('❌ Ambulance socket disconnected');
+      socket.on("disconnect", () => {
+        console.log("❌ Ambulance socket disconnected");
         setIsConnected(false);
       });
 
       socketService.onVitalsReceived((data) => {
-        setTransmissionStatus(`✅ ${data.message} at ${new Date(data.timestamp).toLocaleTimeString()}`);
-        console.log('📨 Vitals transmission confirmed:', data);
+        setTransmissionStatus(
+          `✅ ${data.message} at ${new Date(
+            data.timestamp
+          ).toLocaleTimeString()}`
+        );
+        console.log("📨 Vitals transmission confirmed:", data);
       });
     }
 
     return () => {
-      console.log('🚑 Ambulance Dashboard unmounting');
+      console.log("🚑 Ambulance Dashboard unmounting");
       socketService.removeAllListeners();
       socketService.disconnect();
     };
   }, []);
 
   const handleVitalChange = (field, value) => {
-    setVitals(prev => ({
-      ...prev,
-      [field]: parseInt(value) || value
-    }));
+    const newVitals = {
+      ...vitals,
+      [field]: parseInt(value) || value,
+    };
+    setVitals(newVitals);
+
+    // Update AI recommendations when vitals change
+    if (
+      patientData.patientName ||
+      Object.values(patientData).some((val) => val !== "")
+    ) {
+      const newRecommendations = getAIRecommendations(patientData, newVitals);
+      setAiRecommendations(newRecommendations);
+    }
+  };
+
+  const handlePatientDataChange = (field, value) => {
+    const newPatientData = {
+      ...patientData,
+      [field]: value,
+    };
+    setPatientData(newPatientData);
+
+    // Update AI recommendations when patient data changes
+    if (Object.values(vitals).some((val) => val !== "" && val !== 0)) {
+      const newRecommendations = getAIRecommendations(newPatientData, vitals);
+      setAiRecommendations(newRecommendations);
+    }
+  };
+
+  const getAIRecommendationsAction = () => {
+    const recommendations = getAIRecommendations(patientData, vitals);
+    setAiRecommendations(recommendations);
+    setTransmissionStatus(
+      "🤖 AI analysis completed - Check recommendations below"
+    );
   };
 
   const transmitVitals = () => {
     const vitalsData = {
       patientId: `PAT_${Date.now()}`,
-      patientName: patientData.patientName || 'Unknown Patient',
+      patientName: patientData.patientName || "Unknown Patient",
       ...vitals,
       bloodPressure: {
         systolic: vitals.bloodPressureSystolic,
-        diastolic: vitals.bloodPressureDiastolic
+        diastolic: vitals.bloodPressureDiastolic,
       },
-      ambulanceId: user?.ambulanceId || 'AMB001',
-      paramedicName: 'Sujal Patil',
+      ambulanceId: user?.ambulanceId || "AMB001",
+      paramedicName: "Sujal Patil",
       timestamp: new Date().toISOString(),
-      emergencyLevel: calculateEmergencyLevel(vitals)
+      emergencyLevel: calculateEmergencyLevel(vitals),
+      aiRecommendations: aiRecommendations, // Include AI analysis
     };
 
     socketService.transmitVitals(vitalsData);
-    setTransmissionStatus('🔄 Transmitting vitals...');
+    setTransmissionStatus("🔄 Transmitting vitals with AI analysis...");
   };
 
   const calculateEmergencyLevel = (vitals) => {
-    if (vitals.heartRate < 50 || vitals.heartRate > 140 || 
-        vitals.spo2 < 90 || vitals.bloodPressureSystolic < 90 || 
-        vitals.bloodPressureSystolic > 180) {
-      return 'critical';
-    } else if (vitals.heartRate < 60 || vitals.heartRate > 120 || 
-               vitals.spo2 < 95) {
-      return 'moderate';
+    if (
+      vitals.heartRate < 50 ||
+      vitals.heartRate > 140 ||
+      vitals.spo2 < 90 ||
+      vitals.bloodPressureSystolic < 90 ||
+      vitals.bloodPressureSystolic > 180
+    ) {
+      return "critical";
+    } else if (
+      vitals.heartRate < 60 ||
+      vitals.heartRate > 120 ||
+      vitals.spo2 < 95
+    ) {
+      return "moderate";
     }
-    return 'stable';
+    return "stable";
   };
 
   const toggleSimulation = () => {
     if (!isSimulating) {
       socketService.startVitalsSimulation({
         patientId: `PAT_SIM_${Date.now()}`,
-        patientName: patientData.patientName || 'Simulation Patient',
+        patientName: patientData.patientName || "Simulation Patient",
         patientAge: patientData.patientAge,
-        condition: patientData.condition
+        condition: patientData.condition,
       });
       setIsSimulating(true);
-      setTransmissionStatus('🔄 Simulation started - transmitting vitals every 3 seconds');
+      setTransmissionStatus(
+        "🔄 Simulation started - transmitting vitals every 3 seconds"
+      );
     } else {
       socketService.stopVitalsSimulation();
       setIsSimulating(false);
-      setTransmissionStatus('🛑 Simulation stopped');
+      setTransmissionStatus("🛑 Simulation stopped");
     }
   };
 
   const sendEmergencyAlert = () => {
     const emergencyData = {
-      patientName: patientData.patientName || 'Emergency Patient',
-      condition: patientData.condition || 'Critical condition',
-      location: 'Ambulance in transit',
-      priority: 'high',
-      ambulanceId: user?.ambulanceId || 'AMB001',
+      patientName: patientData.patientName || "Emergency Patient",
+      condition: patientData.condition || "Critical condition",
+      location: "Ambulance in transit",
+      priority: "high",
+      ambulanceId: user?.ambulanceId || "AMB001",
       patientId: `PAT_EMG_${Date.now()}`,
       timestamp: new Date().toISOString(),
       vitals: vitals,
-      paramedicName: 'Sujal Patil'
+      paramedicName: "Sujal Patil",
+      aiRecommendations: aiRecommendations,
     };
 
     socketService.sendEmergencyAlert(emergencyData);
-    setTransmissionStatus('🚨 EMERGENCY ALERT SENT TO HOSPITAL!');
-    
+    setTransmissionStatus(
+      "🚨 EMERGENCY ALERT SENT TO HOSPITAL WITH AI ANALYSIS!"
+    );
+
     // Add to critical alerts history
     const newAlert = {
       ...emergencyData,
       id: Date.now(),
-      status: 'active',
-      sentAt: new Date().toLocaleTimeString()
+      status: "active",
+      sentAt: new Date().toLocaleTimeString(),
     };
-    
+
     const updatedAlerts = [newAlert, ...criticalAlerts.slice(0, 9)];
     setCriticalAlerts(updatedAlerts);
-    localStorage.setItem('ambulanceCriticalAlerts', JSON.stringify(updatedAlerts));
-    
+    localStorage.setItem(
+      "ambulanceCriticalAlerts",
+      JSON.stringify(updatedAlerts)
+    );
+
     setActiveEmergency(newAlert);
   };
 
   const resolveEmergency = () => {
     if (activeEmergency) {
-      const updatedAlerts = criticalAlerts.map(alert => 
-        alert.id === activeEmergency.id 
-          ? { ...alert, status: 'resolved', resolvedAt: new Date().toLocaleTimeString() }
+      const updatedAlerts = criticalAlerts.map((alert) =>
+        alert.id === activeEmergency.id
+          ? {
+              ...alert,
+              status: "resolved",
+              resolvedAt: new Date().toLocaleTimeString(),
+            }
           : alert
       );
       setCriticalAlerts(updatedAlerts);
-      localStorage.setItem('ambulanceCriticalAlerts', JSON.stringify(updatedAlerts));
+      localStorage.setItem(
+        "ambulanceCriticalAlerts",
+        JSON.stringify(updatedAlerts)
+      );
       setActiveEmergency(null);
-      setTransmissionStatus('✅ Emergency resolved and marked in history');
+      setTransmissionStatus("✅ Emergency resolved and marked in history");
     }
   };
 
   const clearAlertHistory = () => {
     setCriticalAlerts([]);
-    localStorage.removeItem('ambulanceCriticalAlerts');
+    localStorage.removeItem("ambulanceCriticalAlerts");
   };
 
   const getCapacityColor = (capacity) => {
     switch (capacity) {
-      case 'High': return 'text-green-600 bg-green-100';
-      case 'Medium': return 'text-orange-600 bg-orange-100';
-      case 'Low': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case "High":
+        return "text-green-600 bg-green-100";
+      case "Medium":
+        return "text-orange-600 bg-orange-100";
+      case "Low":
+        return "text-red-600 bg-red-100";
+      default:
+        return "text-gray-600 bg-gray-100";
+    }
+  };
+
+  const getRiskColor = (riskLevel) => {
+    switch (riskLevel) {
+      case "critical":
+        return "bg-red-500 text-white";
+      case "high":
+        return "bg-orange-500 text-white";
+      case "medium":
+        return "bg-yellow-500 text-black";
+      case "low":
+        return "bg-green-500 text-white";
+      default:
+        return "bg-gray-500 text-white";
     }
   };
 
@@ -255,30 +594,79 @@ const AmbulanceDashboard = () => {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold mb-2">🚑 Ambulance Dashboard</h1>
-            <p className="text-blue-100 text-lg">Welcome, Sujal Patil | {user?.ambulanceId || 'AMB007'}</p>
-            <p className="text-blue-200">Real-time patient monitoring & transmission</p>
+            <p className="text-blue-100 text-lg">
+              Welcome, Sujal Patil | {user?.ambulanceId || "AMB007"}
+            </p>
+            <p className="text-blue-200">
+              Real-time patient monitoring & AI-powered recommendations
+            </p>
           </div>
-          <div className={`px-4 py-2 rounded-full text-sm font-semibold shadow-md ${
-            isConnected ? 'bg-green-500' : 'bg-red-500'
-          }`}>
-            {isConnected ? '✅ Live Connected' : '❌ Disconnected'}
+          <div
+            className={`px-4 py-2 rounded-full text-sm font-semibold shadow-md ${
+              isConnected ? "bg-green-500" : "bg-red-500"
+            }`}
+          >
+            {isConnected ? "✅ Live Connected" : "❌ Disconnected"}
           </div>
         </div>
       </div>
 
       {/* Transmission Status */}
       {transmissionStatus && (
-        <div className={`p-4 rounded-xl mb-6 shadow-md ${
-          transmissionStatus.includes('🚨') ? 'bg-red-50 border-l-4 border-red-500 text-red-700' :
-          transmissionStatus.includes('✅') ? 'bg-green-50 border-l-4 border-green-500 text-green-700' :
-          'bg-blue-50 border-l-4 border-blue-500 text-blue-700'
-        }`}>
+        <div
+          className={`p-4 rounded-xl mb-6 shadow-md ${
+            transmissionStatus.includes("🚨")
+              ? "bg-red-50 border-l-4 border-red-500 text-red-700"
+              : transmissionStatus.includes("✅")
+              ? "bg-green-50 border-l-4 border-green-500 text-green-700"
+              : transmissionStatus.includes("🤖")
+              ? "bg-purple-50 border-l-4 border-purple-500 text-purple-700"
+              : "bg-blue-50 border-l-4 border-blue-500 text-blue-700"
+          }`}
+        >
           <div className="flex items-center">
             <span className="text-lg mr-3">
-              {transmissionStatus.includes('🚨') ? '🚨' : 
-               transmissionStatus.includes('✅') ? '✅' : '🔄'}
+              {transmissionStatus.includes("🚨")
+                ? ""
+                : transmissionStatus.includes("✅")
+                ? ""
+                : transmissionStatus.includes("🤖")
+                ? ""
+                : "🔄"}
             </span>
             <span className="font-medium">{transmissionStatus}</span>
+          </div>
+        </div>
+      )}
+
+      {/* AI Recommendations Banner */}
+      {aiRecommendations && aiRecommendations.riskLevel === "critical" && (
+        <div className="bg-gradient-to-r from-red-500 to-pink-500 text-white p-5 rounded-2xl shadow-lg mb-6 animate-pulse">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-bold mb-2">🤖 AI CRITICAL ALERT</h3>
+              <p>
+                <strong>Risk Level:</strong> CRITICAL - Immediate attention
+                required
+              </p>
+              <p>
+                <strong>Critical Warnings:</strong>{" "}
+                {aiRecommendations.criticalWarnings.join(", ")}
+              </p>
+              <p>
+                <strong>Immediate Actions:</strong>{" "}
+                {aiRecommendations.immediateActions.join(", ")}
+              </p>
+            </div>
+            <div className="text-right">
+              <div
+                className={`px-4 py-2 rounded-full font-bold ${getRiskColor(
+                  aiRecommendations.riskLevel
+                )}`}
+              >
+                CRITICAL
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -289,10 +677,18 @@ const AmbulanceDashboard = () => {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-xl font-bold mb-2">🚨 ACTIVE EMERGENCY</h3>
-              <p><strong>Patient:</strong> {activeEmergency.patientName}</p>
-              <p><strong>Condition:</strong> {activeEmergency.condition}</p>
-              <p><strong>Sent:</strong> {activeEmergency.sentAt}</p>
-              <p><strong>By:</strong> Sujal Patil</p>
+              <p>
+                <strong>Patient:</strong> {activeEmergency.patientName}
+              </p>
+              <p>
+                <strong>Condition:</strong> {activeEmergency.condition}
+              </p>
+              <p>
+                <strong>Sent:</strong> {activeEmergency.sentAt}
+              </p>
+              <p>
+                <strong>By:</strong> Sujal Patil
+              </p>
             </div>
             <button
               onClick={resolveEmergency}
@@ -309,43 +705,214 @@ const AmbulanceDashboard = () => {
         <div className="xl:col-span-2 space-y-6">
           {/* Patient Information */}
           <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-              Patient Information
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+                <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                Patient Information
+              </h2>
+              <button
+                onClick={getAIRecommendationsAction}
+                className="bg-purple-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-purple-700 transition-colors flex items-center space-x-2"
+              >
+                <span>🤖</span>
+                <span>AI Analysis</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Patient Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Patient Name
+                </label>
                 <input
                   type="text"
                   value={patientData.patientName}
-                  onChange={(e) => setPatientData(prev => ({...prev, patientName: e.target.value}))}
+                  onChange={(e) =>
+                    handlePatientDataChange("patientName", e.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Enter patient name"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Age
+                </label>
                 <input
                   type="number"
                   value={patientData.patientAge}
-                  onChange={(e) => setPatientData(prev => ({...prev, patientAge: e.target.value}))}
+                  onChange={(e) =>
+                    handlePatientDataChange("patientAge", e.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Enter age"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Condition</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Gender
+                </label>
+                <select
+                  value={patientData.gender}
+                  onChange={(e) =>
+                    handlePatientDataChange("gender", e.target.value)
+                  }
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="md:col-span-2 lg:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Medical Condition
+                </label>
                 <input
                   type="text"
                   value={patientData.condition}
-                  onChange={(e) => setPatientData(prev => ({...prev, condition: e.target.value}))}
+                  onChange={(e) =>
+                    handlePatientDataChange("condition", e.target.value)
+                  }
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Enter condition"
+                  placeholder="Describe medical condition"
+                />
+              </div>
+              <div className="md:col-span-2 lg:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Symptoms
+                </label>
+                <textarea
+                  value={patientData.symptoms}
+                  onChange={(e) =>
+                    handlePatientDataChange("symptoms", e.target.value)
+                  }
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="List symptoms (chest pain, headache, etc.)"
+                  rows="2"
                 />
               </div>
             </div>
           </div>
+
+          {/* AI Recommendations Panel */}
+          {aiRecommendations && (
+            <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+                <span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
+                AI Medical Recommendations
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div
+                  className={`p-4 rounded-xl border-2 ${
+                    aiRecommendations.riskLevel === "critical"
+                      ? "border-red-500 bg-red-50"
+                      : aiRecommendations.riskLevel === "high"
+                      ? "border-orange-500 bg-orange-50"
+                      : aiRecommendations.riskLevel === "medium"
+                      ? "border-yellow-500 bg-yellow-50"
+                      : "border-green-500 bg-green-50"
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-gray-800">
+                      Risk Assessment
+                    </h3>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-bold ${getRiskColor(
+                        aiRecommendations.riskLevel
+                      )}`}
+                    >
+                      {aiRecommendations.riskLevel.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Confidence:{" "}
+                    {(aiRecommendations.confidence * 100).toFixed(0)}%
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl border-2 border-blue-500 bg-blue-50">
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    Recommended Specialties
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {aiRecommendations.suggestedSpecialties.map(
+                      (specialty, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium"
+                        >
+                          {specialtyIcons[specialty]} {specialty}
+                        </span>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {aiRecommendations.criticalWarnings.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="font-semibold text-red-700 mb-2">
+                    ⚠️ Critical Warnings
+                  </h3>
+                  <ul className="list-disc list-inside text-sm text-red-600 space-y-1">
+                    {aiRecommendations.criticalWarnings.map(
+                      (warning, index) => (
+                        <li key={index}>{warning}</li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {aiRecommendations.immediateActions.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="font-semibold text-green-700 mb-2">
+                    🎯 Immediate Actions
+                  </h3>
+                  <ul className="list-disc list-inside text-sm text-green-600 space-y-1">
+                    {aiRecommendations.immediateActions.map((action, index) => (
+                      <li key={index}>{action}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-2">
+                  🏥 Recommended Hospitals
+                </h3>
+                <div className="space-y-2">
+                  {aiRecommendations.recommendedHospitals
+                    .slice(0, 3)
+                    .map((hospital, index) => (
+                      <div
+                        key={hospital.id}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-800">
+                            {hospital.name}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {hospital.distance} • {hospital.eta} •{" "}
+                            {hospital.specialties.slice(0, 2).join(", ")}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedHospital(hospital)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                        >
+                          Select
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Vitals Input */}
           <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
@@ -355,15 +922,47 @@ const AmbulanceDashboard = () => {
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {[
-                { label: 'Heart Rate', field: 'heartRate', unit: 'bpm', color: 'text-red-500' },
-                { label: 'SpO₂', field: 'spo2', unit: '%', color: 'text-green-500' },
-                { label: 'Systolic BP', field: 'bloodPressureSystolic', unit: 'mmHg', color: 'text-purple-500' },
-                { label: 'Diastolic BP', field: 'bloodPressureDiastolic', unit: 'mmHg', color: 'text-purple-500' },
-                { label: 'Temperature', field: 'temperature', unit: '°C', color: 'text-orange-500' },
-                { label: 'Respiratory Rate', field: 'respiratoryRate', unit: 'bpm', color: 'text-blue-500' }
+                {
+                  label: "Heart Rate",
+                  field: "heartRate",
+                  unit: "bpm",
+                  color: "text-red-500",
+                },
+                {
+                  label: "SpO₂",
+                  field: "spo2",
+                  unit: "%",
+                  color: "text-green-500",
+                },
+                {
+                  label: "Systolic BP",
+                  field: "bloodPressureSystolic",
+                  unit: "mmHg",
+                  color: "text-purple-500",
+                },
+                {
+                  label: "Diastolic BP",
+                  field: "bloodPressureDiastolic",
+                  unit: "mmHg",
+                  color: "text-purple-500",
+                },
+                {
+                  label: "Temperature",
+                  field: "temperature",
+                  unit: "°C",
+                  color: "text-orange-500",
+                },
+                {
+                  label: "Respiratory Rate",
+                  field: "respiratoryRate",
+                  unit: "bpm",
+                  color: "text-blue-500",
+                },
               ].map(({ label, field, unit, color }) => (
                 <div key={field} className="text-center">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {label}
+                  </label>
                   <input
                     type="number"
                     value={vitals[field]}
@@ -382,7 +981,7 @@ const AmbulanceDashboard = () => {
               <span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>
               Transmission Controls
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <button
                 onClick={transmitVitals}
                 disabled={!isConnected}
@@ -391,18 +990,20 @@ const AmbulanceDashboard = () => {
                 <span>📤</span>
                 <span>Transmit Vitals</span>
               </button>
-              
+
               <button
                 onClick={toggleSimulation}
                 disabled={!isConnected}
                 className={`px-6 py-4 rounded-xl font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 shadow-md flex items-center justify-center space-x-2 ${
-                  isSimulating ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+                  isSimulating
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
-                <span>{isSimulating ? '🛑' : '🔄'}</span>
-                <span>{isSimulating ? 'Stop Sim' : 'Start Sim'}</span>
+                <span>{isSimulating ? "🛑" : "🔄"}</span>
+                <span>{isSimulating ? "Stop Sim" : "Start Sim"}</span>
               </button>
-              
+
               <button
                 onClick={sendEmergencyAlert}
                 disabled={!isConnected}
@@ -411,9 +1012,17 @@ const AmbulanceDashboard = () => {
                 <span>🚨</span>
                 <span>Emergency Alert</span>
               </button>
+
+              <button
+                onClick={getAIRecommendationsAction}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 shadow-md flex items-center justify-center space-x-2"
+              >
+                <span></span>
+                <span>AI Analysis</span>
+              </button>
             </div>
-            
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-600">
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs text-gray-600">
               <div className="text-center p-2 bg-gray-50 rounded-lg">
                 <p className="font-semibold">Manual Transmission</p>
                 <p>Send current vitals once</p>
@@ -425,6 +1034,10 @@ const AmbulanceDashboard = () => {
               <div className="text-center p-2 bg-gray-50 rounded-lg">
                 <p className="font-semibold">Emergency Alert</p>
                 <p>Immediate hospital notification</p>
+              </div>
+              <div className="text-center p-2 bg-gray-50 rounded-lg">
+                <p className="font-semibold">AI Analysis</p>
+                <p>Get real-time recommendations</p>
               </div>
             </div>
           </div>
@@ -440,14 +1053,49 @@ const AmbulanceDashboard = () => {
             </h2>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: 'Heart Rate', value: vitals.heartRate, unit: 'bpm', color: 'border-red-200 bg-red-50' },
-                { label: 'SpO₂', value: vitals.spo2, unit: '%', color: 'border-green-200 bg-green-50' },
-                { label: 'Blood Pressure', value: `${vitals.bloodPressureSystolic}/${vitals.bloodPressureDiastolic}`, unit: 'mmHg', color: 'border-purple-200 bg-purple-50' },
-                { label: 'Temperature', value: vitals.temperature, unit: '°C', color: 'border-orange-200 bg-orange-50' },
-                { label: 'Resp. Rate', value: vitals.respiratoryRate, unit: 'bpm', color: 'border-blue-200 bg-blue-50' },
-                { label: 'Status', value: isConnected ? 'Online' : 'Offline', unit: '', color: isConnected ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50' }
+                {
+                  label: "Heart Rate",
+                  value: vitals.heartRate,
+                  unit: "bpm",
+                  color: "border-red-200 bg-red-50",
+                },
+                {
+                  label: "SpO₂",
+                  value: vitals.spo2,
+                  unit: "%",
+                  color: "border-green-200 bg-green-50",
+                },
+                {
+                  label: "Blood Pressure",
+                  value: `${vitals.bloodPressureSystolic}/${vitals.bloodPressureDiastolic}`,
+                  unit: "mmHg",
+                  color: "border-purple-200 bg-purple-50",
+                },
+                {
+                  label: "Temperature",
+                  value: vitals.temperature,
+                  unit: "°C",
+                  color: "border-orange-200 bg-orange-50",
+                },
+                {
+                  label: "Resp. Rate",
+                  value: vitals.respiratoryRate,
+                  unit: "bpm",
+                  color: "border-blue-200 bg-blue-50",
+                },
+                {
+                  label: "Status",
+                  value: isConnected ? "Online" : "Offline",
+                  unit: "",
+                  color: isConnected
+                    ? "border-green-200 bg-green-50"
+                    : "border-red-200 bg-red-50",
+                },
               ].map(({ label, value, unit, color }) => (
-                <div key={label} className={`border-2 rounded-xl p-3 text-center ${color}`}>
+                <div
+                  key={label}
+                  className={`border-2 rounded-xl p-3 text-center ${color}`}
+                >
                   <div className="text-lg font-bold text-gray-800">{value}</div>
                   <div className="text-xs text-gray-600">{label}</div>
                   {unit && <div className="text-xs text-gray-500">{unit}</div>}
@@ -472,7 +1120,7 @@ const AmbulanceDashboard = () => {
                 </button>
               )}
             </div>
-            
+
             <div className="max-h-80 overflow-y-auto">
               {criticalAlerts.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -486,25 +1134,39 @@ const AmbulanceDashboard = () => {
                     <div
                       key={alert.id}
                       className={`border-l-4 rounded-r-lg p-3 ${
-                        alert.status === 'active' 
-                          ? 'border-red-500 bg-red-50' 
-                          : 'border-green-500 bg-green-50'
+                        alert.status === "active"
+                          ? "border-red-500 bg-red-50"
+                          : "border-green-500 bg-green-50"
                       }`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-semibold text-gray-800">{alert.patientName}</p>
-                          <p className="text-sm text-gray-600">{alert.condition}</p>
-                          <p className="text-xs text-gray-500">Sent: {alert.sentAt}</p>
-                          <p className="text-xs text-blue-600">By: Paramedic John</p>
+                          <p className="font-semibold text-gray-800">
+                            {alert.patientName}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {alert.condition}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Sent: {alert.sentAt}
+                          </p>
+                          <p className="text-xs text-blue-600">
+                            By: Sujal Patil
+                          </p>
                           {alert.resolvedAt && (
-                            <p className="text-xs text-green-600">Resolved: {alert.resolvedAt}</p>
+                            <p className="text-xs text-green-600">
+                              Resolved: {alert.resolvedAt}
+                            </p>
                           )}
                         </div>
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                          alert.status === 'active' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
-                        }`}>
-                          {alert.status === 'active' ? 'ACTIVE' : 'RESOLVED'}
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-bold ${
+                            alert.status === "active"
+                              ? "bg-red-500 text-white"
+                              : "bg-green-500 text-white"
+                          }`}
+                        >
+                          {alert.status === "active" ? "ACTIVE" : "RESOLVED"}
                         </span>
                       </div>
                     </div>
@@ -514,35 +1176,43 @@ const AmbulanceDashboard = () => {
             </div>
           </div>
 
-          {/* Hospital Information - YOUR ORIGINAL LAYOUT */}
+          {/* Hospital Information */}
           <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-800 flex items-center">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
                 Nearby Hospitals
               </h2>
-              <span className="text-sm text-gray-500">{hospitals.length} hospitals</span>
+              <span className="text-sm text-gray-500">
+                {hospitals.length} hospitals
+              </span>
             </div>
-            
+
             <div className="max-h-96 overflow-y-auto space-y-4">
               {hospitals.map((hospital) => (
                 <div
                   key={hospital.id}
                   className={`border-2 rounded-xl p-4 transition-all hover:shadow-md cursor-pointer ${
-                    hospital.is24x7 
-                      ? 'border-green-300 bg-green-50 hover:border-green-400' 
-                      : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                    hospital.is24x7
+                      ? "border-green-300 bg-green-50 hover:border-green-400"
+                      : "border-gray-200 bg-gray-50 hover:border-gray-300"
                   } ${
-                    selectedHospital?.id === hospital.id ? 'ring-2 ring-blue-500' : ''
+                    selectedHospital?.id === hospital.id
+                      ? "ring-2 ring-blue-500"
+                      : ""
                   }`}
                   onClick={() => setSelectedHospital(hospital)}
                 >
                   {/* Hospital Header */}
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <h3 className="font-bold text-gray-800 text-lg">{hospital.name}</h3>
+                      <h3 className="font-bold text-gray-800 text-lg">
+                        {hospital.name}
+                      </h3>
                       <div className="flex items-center space-x-3 mt-1">
-                        <span className="text-sm text-gray-600">📍 {hospital.distance} • ⏱️ {hospital.eta}</span>
+                        <span className="text-sm text-gray-600">
+                          📍 {hospital.distance} • ⏱️ {hospital.eta}
+                        </span>
                         {hospital.is24x7 && (
                           <span className="flex items-center text-green-600 text-sm font-semibold">
                             <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
@@ -551,7 +1221,11 @@ const AmbulanceDashboard = () => {
                         )}
                       </div>
                     </div>
-                    <div className={`px-2 py-1 rounded text-xs font-bold ${getCapacityColor(hospital.emergencyCapacity)}`}>
+                    <div
+                      className={`px-2 py-1 rounded text-xs font-bold ${getCapacityColor(
+                        hospital.emergencyCapacity
+                      )}`}
+                    >
                       {hospital.emergencyCapacity}
                     </div>
                   </div>
@@ -565,10 +1239,32 @@ const AmbulanceDashboard = () => {
                           className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-700 text-xs font-medium"
                           title={specialty}
                         >
-                          <span className="mr-1">{specialtyIcons[specialty]}</span>
-                          {specialty.split(' ')[0]}
+                          <span className="mr-1">
+                            {specialtyIcons[specialty]}
+                          </span>
+                          {specialty.split(" ")[0]}
                         </span>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Available Doctors */}
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-600 mb-1">
+                      Available Doctors:
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {hospital.doctors
+                        .filter((d) => d.available)
+                        .slice(0, 2)
+                        .map((doctor, index) => (
+                          <span
+                            key={index}
+                            className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded"
+                          >
+                            {doctor.name} ({doctor.specialty})
+                          </span>
+                        ))}
                     </div>
                   </div>
 
@@ -582,7 +1278,6 @@ const AmbulanceDashboard = () => {
                       className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Here you would implement navigation or communication
                         console.log(`Navigating to ${hospital.name}`);
                       }}
                     >
@@ -596,21 +1291,40 @@ const AmbulanceDashboard = () => {
             {/* Selected Hospital Details */}
             {selectedHospital && (
               <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-blue-800 mb-2">Selected: {selectedHospital.name}</h4>
+                <h4 className="font-semibold text-blue-800 mb-2">
+                  Selected: {selectedHospital.name}
+                </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div><strong>Distance:</strong> {selectedHospital.distance}</div>
-                  <div><strong>ETA:</strong> {selectedHospital.eta}</div>
-                  <div><strong>Beds Available:</strong> {selectedHospital.bedsAvailable}</div>
-                  <div><strong>Contact:</strong> {selectedHospital.contact}</div>
+                  <div>
+                    <strong>Distance:</strong> {selectedHospital.distance}
+                  </div>
+                  <div>
+                    <strong>ETA:</strong> {selectedHospital.eta}
+                  </div>
+                  <div>
+                    <strong>Beds Available:</strong>{" "}
+                    {selectedHospital.bedsAvailable}
+                  </div>
+                  <div>
+                    <strong>Contact:</strong> {selectedHospital.contact}
+                  </div>
                 </div>
                 <div className="mt-2">
-                  <strong>Full Specialties:</strong>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedHospital.specialties.map((specialty, index) => (
-                      <span key={index} className="text-xs bg-white px-2 py-1 rounded border">
-                        {specialtyIcons[specialty]} {specialty}
-                      </span>
-                    ))}
+                  <strong>Available Doctors:</strong>
+                  <div className="space-y-1 mt-1">
+                    {selectedHospital.doctors
+                      .filter((d) => d.available)
+                      .map((doctor, index) => (
+                        <div
+                          key={index}
+                          className="text-xs bg-white px-2 py-1 rounded border flex justify-between"
+                        >
+                          <span>{doctor.name}</span>
+                          <span className="text-blue-600">
+                            {doctor.specialty} ({doctor.experience})
+                          </span>
+                        </div>
+                      ))}
                   </div>
                 </div>
               </div>
